@@ -215,19 +215,19 @@ class SecretsStore(ContextFactory):
         if secret_attributes.get("type") != "versioned":
             raise CorruptSecretError(path, "secret does not have type=versioned")
 
-        previous = secret_attributes.get("previous")
-        next = secret_attributes.get("next")
+        previous_value = secret_attributes.get("previous")
+        next_value = secret_attributes.get("next")
 
         try:
-            current = secret_attributes["current"]
+            current_value = secret_attributes["current"]
         except KeyError as exc:
             raise CorruptSecretError(path, "secret does not have %s" % exc)
 
         encoding = secret_attributes.get("encoding", "identity")
         return VersionedSecret(
-            previous=previous and _decode_secret(path, encoding, previous),
-            current=_decode_secret(path, encoding, current),
-            next=next and _decode_secret(path, encoding, next),
+            previous=previous_value and _decode_secret(path, encoding, previous_value),
+            current=_decode_secret(path, encoding, current_value),
+            next=next_value and _decode_secret(path, encoding, next_value),
         )
 
 
