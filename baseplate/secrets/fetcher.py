@@ -210,11 +210,11 @@ def octal_integer(text):
     return int(text, base=8)
 
 
-def user_name(text):
+def user_name_to_uid(text):
     return pwd.getpwnam(text).pw_uid
 
 
-def group_name(text):
+def group_name_to_gid(text):
     return grp.getgrnam(text).gr_gid
 
 
@@ -244,8 +244,8 @@ def main():
 
         "output": {
             "path": config.Optional(config.String, default="/var/local/secrets.json"),
-            "owner": config.Optional(user_name, default=0),
-            "group": config.Optional(group_name, default=0),
+            "owner": config.Optional(user_name_to_uid, default=0),
+            "group": config.Optional(group_name_to_gid, default=0),
             "mode": config.Optional(octal_integer, default=0o400),
         },
 
