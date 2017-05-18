@@ -143,9 +143,6 @@ class SecretsStore(ContextFactory):
             self._secrets = raw_data["secrets"]
             self._mtime = mtime
 
-    def make_object_for_context(self, name, server_span):  # pragma: nocover
-        return self
-
     def get_vault_token(self):
         """Return a Vault authentication token.
 
@@ -243,6 +240,18 @@ class SecretsStore(ContextFactory):
             current=_decode_secret(path, encoding, current_value),
             next=next_value and _decode_secret(path, encoding, next_value),
         )
+
+    def make_object_for_context(self, name, server_span):  # pragma: nocover
+        """Return an object that can be added to the context object.
+
+        This allows the secret store to be used with
+        :py:meth:`~baseplate.core.Baseplate.add_to_context`::
+
+           secrets = SecretsStore("/var/local/secrets.json")
+           baseplate.add_to_context("secrets", secrets)
+
+        """
+        return self
 
 
 def secrets_store_from_config(app_config):
