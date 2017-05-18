@@ -182,7 +182,7 @@ class SecretsStore(ContextFactory):
             This contains the raw value of the secret token.
         ``encoding``
             (Optional) If present, how to decode the value from how it's
-            encoded at rest (Only ``base64`` currently supported).
+            encoded at rest (only ``base64`` currently supported).
 
         :rtype: :py:class:`bytes`
 
@@ -216,7 +216,7 @@ class SecretsStore(ContextFactory):
             ``previous`` and ``next`` are optional.
         ``encoding``
             (Optional) If present, how to decode the values from how they are
-            encoded at rest (Only ``base64`` currently supported).
+            encoded at rest (only ``base64`` currently supported).
 
         :rtype: :py:class:`VersionedSecret`
 
