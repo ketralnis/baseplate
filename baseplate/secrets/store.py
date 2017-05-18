@@ -10,6 +10,7 @@ import collections
 import datetime
 import json
 import logging
+import os
 
 from .. import config
 from ..context import ContextFactory
@@ -114,20 +115,39 @@ class SecretsStore(ContextFactory):
     def __init__(self, path):
         self._path = path
         self._expiration = datetime.datetime.min
+        self._mtime = 0
         self._secrets = None
         self._vault_token = None
 
-    def _load_if_expired(self):
-        if self._expiration < datetime.datetime.utcnow():
+    def _load_if_needed(self):
+        """Load the secrets from disk if expired or modified since last read.
+
+        Expired secrets are always bad, but it's also important to reload if
+        changed because this allows configuration changes of the fetcher daemon
+        to be picked up automatically by running services without being
+        restarted and also makes us less susceptible to race conditions when
+        both are being restarted at the same time.
+
+        """
+        secrets_expired = self._expiration < datetime.datetime.utcnow()
+
+        try:
+            secrets_file_updated = self._mtime < os.path.getmtime(self._path)
+        except OSError:
+            secrets_file_updated = False
+
+        if secrets_expired or secrets_file_updated:
             logger.debug("Loading secrets from %s.", self._path)
 
             with open(self._path) as f:
                 raw_data = json.load(f)
+                mtime = os.fstat(f.fileno()).st_mtime
 
             self._expiration = datetime.datetime.strptime(
                 raw_data["expiration"], ISO_FORMAT)
             self._vault_token = raw_data["vault_token"]
             self._secrets = raw_data["secrets"]
+            self._mtime = mtime
 
     def make_object_for_context(self, name, server_span):  # pragma: nocover
         return self
@@ -141,7 +161,7 @@ class SecretsStore(ContextFactory):
         :rtype: :py:class:`str`
 
         """
-        self._load_if_expired()
+        self._load_if_needed()
         return self._vault_token
 
     def get_raw(self, path):
@@ -152,7 +172,7 @@ class SecretsStore(ContextFactory):
         :rtype: :py:class:`dict`
 
         """
-        self._load_if_expired()
+        self._load_if_needed()
 
         try:
             return self._secrets[path]

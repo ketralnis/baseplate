@@ -77,7 +77,11 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(updated_secret, {"a": 2})
         self.assertEqual(secrets.get_vault_token(), "test2")
 
-    def test_dont_reload_while_not_expired(self):
+    @mock.patch("os.fstat")
+    @mock.patch("os.path.getmtime")
+    def test_dont_reload_while_not_expired_or_changed(self, getmtime, fstat):
+        getmtime.return_value = 1
+        fstat.return_value = mock.Mock(st_mtime=1)
         self._fill_secrets_file("""{
             "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
@@ -87,11 +91,40 @@ class StoreTests(unittest.TestCase):
         }""")
 
         secrets = store.SecretsStore(self.tempfile.name)
-        secrets.get_raw("test")
+        self.assertEqual(secrets.get_raw("test"), {"a": 1})
 
-        self._fill_secrets_file("!")  # this should fail parsing if it gets read
+        # this will not parse, so we know we didn't reload if we don't crash!
+        self._fill_secrets_file("!")
+        self.assertEqual(secrets.get_raw("test"), {"a": 1})
 
-        secrets.get_raw("test")
+    # we patch the mtime stuff because it has whole-second granularity and it's
+    # best not to make the tests take longer just to ensure we tick over.
+    @mock.patch("os.fstat")
+    @mock.patch("os.path.getmtime")
+    def test_reload_when_mtime_changes(self, getmtime, fstat):
+        getmtime.return_value = 1
+        fstat.return_value = mock.Mock(st_mtime=1)
+        self._fill_secrets_file("""{
+            "expiration": "2017-05-05T09:42:35.143Z",
+            "secrets": {
+                "test": {"a": 1}
+            },
+            "vault_token": "test1"
+        }""")
+
+        secrets = store.SecretsStore(self.tempfile.name)
+        self.assertEqual(secrets.get_raw("test"), {"a": 1})
+
+        getmtime.return_value = 2
+        fstat.return_value = mock.Mock(st_mtime=2)
+        self._fill_secrets_file("""{
+            "expiration": "2017-05-05T09:42:35.143Z",
+            "secrets": {
+                "test": {"a": 2}
+            },
+            "vault_token": "test1"
+        }""")
+        self.assertEqual(secrets.get_raw("test"), {"a": 2})
 
     def test_simple_secrets(self):
         self._fill_secrets_file("""{
