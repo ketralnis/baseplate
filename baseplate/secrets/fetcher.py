@@ -25,7 +25,6 @@ The secrets will be read from Vault and written to output.path as a JSON file
 with the following structure:
 
     {
-        "expiration": "2017-05-05T09:42.143:35Z",
         "secrets": {
             "secret/one": {...},
             "secret/two": {...},
@@ -269,7 +268,6 @@ def main():
 
             json.dump({
                 "vault_token": client.token,
-                "expiration": soonest_expiration.isoformat() + "Z",
                 "secrets": secrets,
             }, f, indent=2, sort_keys=True)
 

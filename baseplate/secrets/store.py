@@ -101,10 +101,10 @@ def _decode_secret(path, encoding, value):
 
 
 class SecretsStore(ContextFactory):
-    """Access to secret tokens with automatic refresh on expiration.
+    """Access to secret tokens with automatic refresh when changed.
 
     This local vault allows access to the secrets cached on disk by the fetcher
-    daemon. It will automatically reload the cache when it expires. Do not
+    daemon. It will automatically reload the cache when it is changed. Do not
     cache or store the values returned by this class's methods but rather get
     them from this class each time you need them. The secrets are served from
     memory so there's little performance impact to doing so and you will be
@@ -114,7 +114,6 @@ class SecretsStore(ContextFactory):
 
     def __init__(self, path):
         self._path = path
-        self._expiration = datetime.datetime.min
         self._mtime = 0
         self._secrets = None
         self._vault_token = None
@@ -129,22 +128,18 @@ class SecretsStore(ContextFactory):
         both are being restarted at the same time.
 
         """
-        secrets_expired = self._expiration < datetime.datetime.utcnow()
-
         try:
             secrets_file_updated = self._mtime < os.path.getmtime(self._path)
         except OSError:
             secrets_file_updated = False
 
-        if secrets_expired or secrets_file_updated:
+        if secrets_file_updated:
             logger.debug("Loading secrets from %s.", self._path)
 
             with open(self._path) as f:
                 raw_data = json.load(f)
                 mtime = os.fstat(f.fileno()).st_mtime
 
-            self._expiration = datetime.datetime.strptime(
-                raw_data["expiration"], ISO_FORMAT)
             self._vault_token = raw_data["vault_token"]
             self._secrets = raw_data["secrets"]
             self._mtime = mtime

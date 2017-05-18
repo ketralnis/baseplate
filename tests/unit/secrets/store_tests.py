@@ -32,7 +32,6 @@ class StoreTests(unittest.TestCase):
 
     def test_initial_fetch_loads_secrets(self):
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {"a": 1}
             },
@@ -48,42 +47,12 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(store.SecretNotFoundError):
             secrets.get_raw("does_not_exist")
 
-    def test_expired_gets_reloaded(self):
-        self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:37:35.143Z",
-            "secrets": {
-                "test": {"a": 1}
-            },
-            "vault_token": "test1"
-        }""")
-
-        secrets = store.SecretsStore(self.tempfile.name)
-        old_secret = secrets.get_raw("test")
-
-        self.assertEqual(old_secret, {"a": 1})
-        self.assertEqual(secrets.get_vault_token(), "test1")
-
-        self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
-            "secrets": {
-                "test": {"a": 2}
-            },
-            "vault_token": "test2"
-        }""")
-
-        self.mock_datetime_cls.utcnow.return_value = datetime.datetime(2017, 5, 5, 9, 48)
-        updated_secret = secrets.get_raw("test")
-
-        self.assertEqual(updated_secret, {"a": 2})
-        self.assertEqual(secrets.get_vault_token(), "test2")
-
     @mock.patch("os.fstat")
     @mock.patch("os.path.getmtime")
-    def test_dont_reload_while_not_expired_or_changed(self, getmtime, fstat):
+    def test_dont_reload_while_not_changed(self, getmtime, fstat):
         getmtime.return_value = 1
         fstat.return_value = mock.Mock(st_mtime=1)
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {"a": 1}
             },
@@ -105,7 +74,6 @@ class StoreTests(unittest.TestCase):
         getmtime.return_value = 1
         fstat.return_value = mock.Mock(st_mtime=1)
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {"a": 1}
             },
@@ -118,7 +86,6 @@ class StoreTests(unittest.TestCase):
         getmtime.return_value = 2
         fstat.return_value = mock.Mock(st_mtime=2)
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {"a": 2}
             },
@@ -128,7 +95,6 @@ class StoreTests(unittest.TestCase):
 
     def test_simple_secrets(self):
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {
                     "type": "simple",
@@ -178,7 +144,6 @@ class StoreTests(unittest.TestCase):
 
     def test_versioned_secrets(self):
         self._fill_secrets_file("""{
-            "expiration": "2017-05-05T09:42:35.143Z",
             "secrets": {
                 "test": {
                     "type": "versioned",
