@@ -36,7 +36,7 @@ try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
     # package is not installed
-   __version__ = 'unknown'
+    __version__ = 'unknown'
 
 
 logger = logging.getLogger(__name__)
